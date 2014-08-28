@@ -33,6 +33,28 @@ class wechatCallbackapiTest
     {
 		//get post data, May be due to the different environments
 		$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
+		$listTpl=" <xml>
+					 <ToUserName><![CDATA[%s]]></ToUserName>
+					 <FromUserName><![CDATA[%s]]></FromUserName>
+					 <CreateTime>%s</CreateTime>
+					 <MsgType><![CDATA[%s]]></MsgType>
+					 <ArticleCount>%s</ArticleCount>
+					 <Articles>%s</Articles>
+					 </xml> ";
+		$itemTpl = " <item>
+					 <Title><![CDATA[%s]]></Title> 
+					 <Description><![CDATA[%s]]></Description>
+					 <PicUrl><![CDATA[%s]]></PicUrl>
+					 <Url><![CDATA[%s]]></Url>
+					 </item>";		
+		$textTpl = "<xml>
+					<ToUserName><![CDATA[%s]]></ToUserName>
+					<FromUserName><![CDATA[%s]]></FromUserName>
+					<CreateTime>%s</CreateTime>
+					<MsgType><![CDATA[%s]]></MsgType>
+					<Content><![CDATA[%s]]></Content>
+					<FuncFlag>0</FuncFlag>
+					</xml>";   									 
 
       	//extract post data
 		if (!empty($postStr)){
@@ -42,14 +64,6 @@ class wechatCallbackapiTest
                 $toUsername = $postObj->ToUserName;
                 $keyword = trim($postObj->Content);
                 $time = time();
-                $textTpl = "<xml>
-							<ToUserName><![CDATA[%s]]></ToUserName>
-							<FromUserName><![CDATA[%s]]></FromUserName>
-							<CreateTime>%s</CreateTime>
-							<MsgType><![CDATA[%s]]></MsgType>
-							<Content><![CDATA[%s]]></Content>
-							<FuncFlag>0</FuncFlag>
-							</xml>";   
 
 				//获取事件类型
 				$type=$postObj->MsgType;
@@ -66,10 +80,65 @@ class wechatCallbackapiTest
 						$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
 						echo $resultStr;
 					}else if($event=='CLICK'){
-						$contentStr= "【点击】点击自定义菜单";
-						$msgType = "text";
-						$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
-						echo $resultStr;
+						$eventKey = $postObj->EventKey;
+						$openID = $postObj->FromUserName;//this is user id
+						if($eventKey == "my_favorite"){
+							//get article list from remote JSON
+							$restURL = "http://localhost:8080/myfav";
+							$baseURL = "http://124.42.107.200/myfav";
+							$url = $restURL."?user=".$openID;
+							$lines_array = file($url);
+							$lines_string = implode('',$lines_array);            
+							$json = htmlspecialchars($lines_string,ENT_NOQUOTES);
+							$array = json_decode($json);
+							$itemCount = 0;
+							$totalCount = count($array);
+							for($i=0;$i<count($array);$i++){
+								if($itemCount>3)//we only display 4 items for mobile
+									break;
+								$object = $array[$i]; // The array could contain multiple instances of your content type
+								$title = $object->title; // title is a field of your content type
+								$decription = "这是收藏内容，原文已作快照。【原文地址】".$object->from;
+								$picUrl = $baseURL."/".$object->image."_1.png";							
+								$linkUrl =  $baseURL."/".$object->url.".html";
+								$itemStr = sprintf($itemTpl,$title,$description,$picUrl,$linkUrl);
+								$itemList = $itemList.$itemStr;
+								$itemCount ++;
+							}
+							//if there has more items then we add a FINDMORE link
+							if($itemCount>0 && totalCount > itemCount){
+								$title = "查看更多收藏内容";
+								$decription = "默认只显示了5条内容，这里还有更多";
+								$picUrl = $baseURL."/more.png";							
+								$linkUrl =  $baseURL."/more.php?user=".$openID;
+								$itemStr = sprintf($itemTpl,$title,$description,$picUrl,$linkUrl);
+								$itemList = $itemList.$itemStr;
+								$itemCount ++;							
+							}
+							if($itemCount>0){
+								$msgType = "news";
+								$resultStr = sprintf($listTpl, $fromUsername, $toUsername, $time, $msgType,$itemCount, $itemList);
+								echo $resultStr;
+							}else{
+								$msgType = "text";
+								$contentStr= '你还没有收藏任何内容，直接发送需要收藏的链接地址就可以了哦';
+								$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+								echo $resultStr;						
+							}
+						}else if($eventKey == "get_help"){
+							$contentStr= "当前提供以下功能："
+							."\n【1.添加收藏】直接发送URL即可，注意除URL外不需要编写任何其他内容。"
+							."\n【2.查看收藏】点击\"我的收藏\"菜单即可查看。"
+							."\n【3.内容搜索】直接发送需要搜索的关键字，如\"至同思睿\"";
+							$msgType = "text";
+							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+							echo $resultStr;
+						}else{
+							$contentStr= "偶滴神啊，你点错了吧？";
+							$msgType = "text";
+							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+							echo $resultStr;
+						}					
 					}
 				}else if($type=='location'){
 					$label = $postObj->Label;
@@ -83,95 +152,30 @@ class wechatCallbackapiTest
 				}else if($type=='text'){
 					if(!empty( $keyword )){//here we return an article list
 						$msgType = "news";
-						$listTpl=" <xml>
-									 <ToUserName><![CDATA[%s]]></ToUserName>
-									 <FromUserName><![CDATA[%s]]></FromUserName>
-									 <CreateTime>%s</CreateTime>
-									 <MsgType><![CDATA[%s]]></MsgType>
-									 <ArticleCount>%s</ArticleCount>
-									 <Articles>%s</Articles>
-									 </xml> ";
-						$itemTpl = " <item>
-									 <Title><![CDATA[%s]]></Title> 
-									 <Description><![CDATA[%s]]></Description>
-									 <PicUrl><![CDATA[%s]]></PicUrl>
-									 <Url><![CDATA[%s]]></Url>
-									 </item>";
 						$itemList = "";
 						$itemCount = 0;		
-						if($keyword=='like' || $keyword=='收藏'){
-							//get coupon list from remote JSON
-							$url = "http://124.42.107.200:8080/foodinfos";
-							$lines_array = file($url);
-							$lines_string = implode('',$lines_array);            
-							$json = htmlspecialchars($lines_string,ENT_NOQUOTES);
-							$array = json_decode($json);
-							for($i=0;$i<count($array);$i++){
-								if($itemCount>4)//we only display 4 items for mobile
-									break;
-								$object = $array[$i]; // The array could contain multiple instances of your content type
-								if(count($object->food)>0){
-									$title = "【".implode(' ',$object->food)."】".$object->title.' '.$object->time; 
-								}elseif(count($object->tag)>0){
-									$title = "【".implode(' ',$object->tag)."】".$object->title.' '.$object->time; 
-								}else{
-									$title = $object->title.' '.$object->time; 
-								}
-								$decription = $object->time.' '.$object->title;
-								$picUrl = $object->image;//"http://www.zhuqingchun.com/kill.jpg";
-								$linkUrl = $object->url;
-								$itemStr = sprintf($itemTpl,$title,$description,$picUrl,$linkUrl);
-								$itemList = $itemList.$itemStr;
-								$itemCount ++;
-							}								
-						}else if(preg_match('/http:\/\/[\w.]+[\w\/]*[\w.]*\??[\w=&\+\%]*/is',$keyword)){
+						if(preg_match('/http:\/\/[\w.]+[\w\/]*[\w.]*\??[\w=&\+\%]*/is',$keyword)){
 							//if the user send a URL then we will scrape it and save
 							$linkURL = $postObj->Url;
 							$openID = $postObj->FromUserName;//this is user id
 							//scrape content and save to local disk
+							//exec command: phantomjs getPage.js url user dir server
+							$storageDir = dirname(__FILE__)."\\myfav";
+							$scriptFile = $storageDir."\\a\\getPage.js";
+							$logfile = $storageDir."\\".md5($keyword).".log";
+							$restServer = "http://localhost:8080/myfav";
+							$command = 'D:\\Lab\\phantomjs\\phantomjs.exe '.$scriptFile." \"".$keyword."\" ".$openID." ".$storageDir." ".$restServer;
+							exec($command." >".$logfile." 2>&1");
 							$msgType = "text";
-							$responseTpl="发送的内容已加入收藏，可通过“我的收藏”查看。【URL】%s";
+							$responseTpl="已收藏，即使原文被删除也可随时点击“我的收藏”查看。";
 							$contentStr = sprintf($responseTpl,$linkURL);
-							//$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
-							//echo $resultStr;
 						}else{
-							//get article list from remote JSON
-							$url = "http://www.zhuqingchun.com/rest/article";
-							$lines_array = file($url);
-							$lines_string = implode('',$lines_array);            
-							$json = htmlspecialchars($lines_string,ENT_NOQUOTES);
-							$array = json_decode($json);
-							for($i=0;$i<count($array);$i++){
-								if($itemCount>4)//we only display 4 items for mobile
-									break;
-								$object = $array[$i]; // The array could contain multiple instances of your content type
-								$title = $object->node_title; // title is a field of your content type
-								$decription = "这是测试描述文字。【文章标题】".$object->node_title;
-								$picUrl = "http://www.zhuqingchun.com/screwed.png";
-								//retrieve image from article
-								$regex = '/src="([^"]+)"/i';
-								$imgstr = ''.$object->Image;
-								$matches = array();
-								if(preg_match($regex, $imgstr, $matches)){
-									$picUrl = $matches[1];//the first one is matched string
-								}	
-								//end 								
-								$linkUrl = "http://www.zhuqingchun.com/node/".$object->nid;
-								$itemStr = sprintf($itemTpl,$title,$description,$picUrl,$linkUrl);
-								$itemList = $itemList.$itemStr;
-								$itemCount ++;
-							}
-						}
-						if($itemCount>1){
-							$msgType = "news";
-							$resultStr = sprintf($listTpl, $fromUsername, $toUsername, $time, $msgType,$itemCount, $itemList);
-							echo $resultStr;
-						}else{
-							//$contentStr= '调试中，还没找到与"'.$keyword.'"相关的内容。重新尝试看看？';
+							//we try to search myfav
+							$contentStr= '偶滴神啊，你竟然无师自通的尝试搜索与"'.$keyword.'"相关的内容。不过我们还没开放这个功能呢';
 							$msgType = "text";
 							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
-							echo $resultStr;						
-						}
+							echo $resultStr;	
+						}							
 					}else{
 						echo "哦~~~写点什么吧？";
 					}
@@ -183,12 +187,17 @@ class wechatCallbackapiTest
 					$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
 					echo $resultStr;
 				}else if($type=='link'){//here we will save the content
-					$linkURL = $postObj->Url;
-					$msgType = "text";
-					$responseTpl="发送的内容已加入收藏，可通过“我的收藏”查看。【URL】%s";
-					$contentStr = sprintf($responseTpl,$linkURL);
-					$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
-					echo $resultStr;
+					$eventKey = $postObj->EventKey;
+					if($eventKey == ""){
+						
+					}else{
+						$linkURL = $postObj->Url;
+						$msgType = "text";
+						$responseTpl="发送的内容已加入收藏，可通过“我的收藏”查看。【URL】%s";
+						$contentStr = sprintf($responseTpl,$linkURL);
+						$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+						echo $resultStr;
+					}
 				}else{
 					echo "当前还不支持语音、图片、链接等形式哦";
 				}
@@ -304,6 +313,26 @@ function dataPost($post_string, $url) {//POST方式提交数据
 	$stream_context = stream_context_create ( $context );
 	$data = file_get_contents ( $url, FALSE, $stream_context );
 	return $data;
+}
+
+function getMyFav($openID){
+	$listTpl=" <xml>
+				 <ToUserName><![CDATA[%s]]></ToUserName>
+				 <FromUserName><![CDATA[%s]]></FromUserName>
+				 <CreateTime>%s</CreateTime>
+				 <MsgType><![CDATA[%s]]></MsgType>
+				 <ArticleCount>%s</ArticleCount>
+				 <Articles>%s</Articles>
+				 </xml> ";
+	$itemTpl = " <item>
+				 <Title><![CDATA[%s]]></Title> 
+				 <Description><![CDATA[%s]]></Description>
+				 <PicUrl><![CDATA[%s]]></PicUrl>
+				 <Url><![CDATA[%s]]></Url>
+				 </item>";
+
+
+	
 }
 
 ?>

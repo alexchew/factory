@@ -12,22 +12,30 @@ var headers = {"Content-Type": "application/json"};
 
 //check mandatory parameter:dir,user,server,url
 if (phantom.args.length < 2) {
-    console.log('Usage: getPage.js url user [dir] [server]');
+    console.log('Usage: getPage.js url user [dir] [server] [filename]');
     phantom.exit();
 }else if(phantom.args.length === 2){
 	url = phantom.args[0];
 	user = phantom.args[1];
+	filename = md5.MD5(url);	
 }else if(phantom.args.length === 3){
 	url = phantom.args[0];
 	user = phantom.args[1];
+	dir = phantom.args[2];	
+	filename = md5.MD5(url);
+}else if(phantom.args.length === 4){
+	url = phantom.args[0];
+	user = phantom.args[1];
 	dir = phantom.args[2];
+	server = phantom.args[3];
+	filename = md5.MD5(url);
 }else{
 	url = phantom.args[0];
 	user = phantom.args[1];
 	dir = phantom.args[2];
 	server = phantom.args[3];
+	filename = phantom.args[4];
 }
-filename = md5.MD5(url);
 
 var path = dir+"/"+filename;
 
@@ -54,7 +62,8 @@ page.onLoadFinished = function(status) {
 }
 //**/
 function post(){
-	var data = {user:user,page:filename,url:url,title:encodeURIComponent(title)};//we get a doc with no image info
+	var favid = md5.MD5(url+user);
+	var data = {favid:favid,user:user,url:filename,from:url,title:encodeURIComponent(title),image:filename};//we get a doc with no image info
 	console.log("try to post data.[data]"+JSON.stringify(data));
 	page.open(server,'POST',JSON.stringify(data), headers, function (status) {
 		if (status !== 'success') {
@@ -69,6 +78,9 @@ function post(){
 function render(){
 	page.render(path+".png");
 	console.log("screencast saved.");
+	page.clipRect={top:30,left:15,width:360,height:270};
+	page.render(path+"_1.png");
+	console.log("small logo saved.");	
 	setTimeout(post,100);
 }
 
@@ -82,7 +94,7 @@ function open(){
 			title = page.title;
 			fs.write(path+".html",page.content,'w');
 			console.log("page saved.");
-			setTimeout(render,3000);
+			setTimeout(render,100);
 		}
 	});
 }
