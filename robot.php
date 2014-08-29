@@ -167,8 +167,10 @@ class wechatCallbackapiTest
 							$command = 'D:\\Lab\\phantomjs\\phantomjs.exe '.$scriptFile." \"".$keyword."\" ".$openID." ".$storageDir." ".$restServer;
 							exec($command." >".$logfile." 2>&1");
 							$msgType = "text";
-							$responseTpl="已收藏，即使原文被删除也可随时点击“我的收藏”查看。";
-							$contentStr = sprintf($responseTpl,$linkURL);
+							$contentStr="已收藏，即使原文被删除也可随时点击“我的收藏”查看。";
+							//$contentStr = sprintf($responseTpl,$linkURL);
+							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+							echo $resultStr;	
 						}else{
 							//we try to search myfav
 							$contentStr= '偶滴神啊，你竟然无师自通的尝试搜索与"'.$keyword.'"相关的内容。不过我们还没开放这个功能呢';
