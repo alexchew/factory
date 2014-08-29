@@ -1,4 +1,4 @@
-var page = require('webpage').create();
+﻿var page = require('webpage').create();
 var md5 = require('./md5');
 var fs = require('fs');
 var url = "http://mp.weixin.qq.com/s?__biz=MzA5NjA3NzUzOA==&mid=200374388&idx=2&sn=649b284fb3bd76451ad923c96526ad66#rd";
@@ -7,8 +7,10 @@ var filename = "a";
 var title = "Unknown";
 var user = "unknown";
 
+var solrServer = "http://124.42.107.200:8090/solr/update/json";
+
 var server = "http://localhost:8090/weixin";
-var headers = {"Content-Type": "application/json"};
+var headers = {"Content-Type": "application/json;Charset=UTF-8"};
 
 //check mandatory parameter:dir,user,server,url
 if (phantom.args.length < 2) {
@@ -61,6 +63,59 @@ page.onLoadFinished = function(status) {
       //phantom.exit();
 }
 //**/
+
+function commitIndex(){
+	console.log("try to commit index.[url]"+solrServer);
+	page.open(solrServer+"?commit=true", function (status) {
+		if (status !== 'success') {
+			console.log('Unable to access network');
+		} else {
+			console.log('Index committed.[response]'+page.plainText);
+		}
+		phantom.exit();
+	});
+}
+
+//post the document to Solr
+function postIndex(){
+	var favid = md5.MD5(url+user);
+	var content = "Cannot read data from source page"; 
+	try{
+		content = fs.read(path+".html");
+	}catch(err){
+		console.log("error while reading file.[file]"+path+".html\n[error]"+err);
+	}
+	var data =[
+		{
+			id:favid,
+			//title:"[original]"+title+"[GBK2UTF8]"+encodeUtil.GB2312ToUTF8(title)+"[UTF82GBK]"+encodeUtil.UTF8ToGB2312(title),
+			title:title,
+			fileName: filename+".html",
+			author: user,
+			format: "htm",
+			content:content,
+			category: "myfav",
+			classifier: "com.prophet.channel.weixin.myfav",
+			uri: "http://124.42.107.200/myfav/"+filename+".html",
+			source: "weixin",
+			securityLevel: 0,
+			summary: "content from weixin myfav",
+			thumbnailURL: "http://124.42.107.200/myfav/"+filename+"_1.png"
+		}
+	];
+	//console.log("try to post index.[data]"+JSON.stringify(data));
+	console.log("try to post index.[data]"+data[0].title);
+	page.open(solrServer,'POST',JSON.stringify(data), headers, function (status) {
+		if (status !== 'success') {
+			console.log('Unable to access network. [status]'+status);
+			phantom.exit();
+		} else {//posted
+			console.log("posted."+page.plainText);
+			setTimeout(commitIndex,100);
+		}
+	});	
+}
+
 function post(){
 	var favid = md5.MD5(url+user);
 	var data = {favid:favid,user:user,url:filename,from:url,title:encodeURIComponent(title),image:filename};//we get a doc with no image info
@@ -68,10 +123,11 @@ function post(){
 	page.open(server,'POST',JSON.stringify(data), headers, function (status) {
 		if (status !== 'success') {
 			console.log('Unable to access network. [status]'+status);
+			phantom.exit();			
 		} else {//posted
 			console.log("posted."+page.plainText);
+			setTimeout(postIndex,100);
 		}
-		phantom.exit();
 	});	
 }
 

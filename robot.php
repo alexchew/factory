@@ -171,12 +171,46 @@ class wechatCallbackapiTest
 							//$contentStr = sprintf($responseTpl,$linkURL);
 							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
 							echo $resultStr;	
-						}else{
-							//we try to search myfav
-							$contentStr= '偶滴神啊，你竟然无师自通的尝试搜索与"'.$keyword.'"相关的内容。不过我们还没开放这个功能呢';
-							$msgType = "text";
-							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
-							echo $resultStr;	
+						}else{//we try to search myfav
+							$openID = $postObj->FromUserName;//this is user id
+							//get article list from remote JSON
+							$restURL = "http://124.42.107.200:8090/solr/select?wt=json&fl=title,uri,thumbnailURL&q=";
+							$baseURL = "http://124.42.107.200/myfav";
+							//source:weixin AND author:alexchew  AND (title:2014 OR id:3f8aa03f821704649d73222d59e453fb)	
+							$q = "author:".$openID." AND (title:".$keyword." OR content:".$keyword.")";
+							$url = $restURL.urlencode($q);//NOTICE here: we must encode query string
+							$lines_array = file($url);
+							$lines_string = implode('',$lines_array);                 
+							$json = htmlspecialchars($lines_string,ENT_NOQUOTES);
+							if(empty($json)){
+								echo $resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, "text", "搜索服务当前不可用");	
+							}else{
+								$obj = json_decode($json);
+								$itemCount = 0;
+								$array = $obj->response->docs;
+								for($i=0;$i<count($array);$i++){
+									if($itemCount>4)//we only display 4 items for mobile
+										break;
+									$object = $array[$i]; // The array could contain multiple instances of your content type
+									$title = $object->title; // title is a field of your content type
+									$decription = "这是收藏内容，原文已作快照。【原文地址】".$object->from;
+									$picUrl = $object->thumbnailURL;							
+									$linkUrl = $object->uri;
+									$itemStr = sprintf($itemTpl,$title,$description,$picUrl,$linkUrl);
+									$itemList = $itemList.$itemStr;
+									$itemCount ++;
+								}
+								if($itemCount>0){
+									$msgType = "news";
+									$resultStr = sprintf($listTpl, $fromUsername, $toUsername, $time, $msgType,$itemCount, $itemList);
+									echo $resultStr;
+								}else{
+									$msgType = "text";
+									$contentStr= '在你的收藏里没找到任何符合"'.$keyword.'"的内容，重新输入看看？';
+									$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+									echo $resultStr;						
+								}				
+							}
 						}							
 					}else{
 						echo "哦~~~写点什么吧？";
@@ -308,6 +342,16 @@ function getCurl($url){//get https的内容
 	$result =  curl_exec($ch);
 	curl_close ($ch);
 	return $result;
+}
+
+function curl_file_get_contents($durl){  
+    $ch = curl_init();  
+    curl_setopt($ch, CURLOPT_URL, $durl);  
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true) ; // 获取数据返回    
+    curl_setopt($ch, CURLOPT_BINARYTRANSFER, true) ; // 在启用 CURLOPT_RETURNTRANSFER 时候将获取数据返回    
+    $r = curl_exec($ch);  
+    curl_close($ch);  
+    return $r;  
 }
  
 function dataPost($post_string, $url) {//POST方式提交数据
