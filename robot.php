@@ -70,7 +70,7 @@ class wechatCallbackapiTest
 				if($type=='event'){
 					$event = $postObj->Event;
 					if($event=='subscribe'){
-						$contentStr= "【新关注】欢迎关注至同思睿，我们专注于制造业，我们将为你带来最新的行业信息";
+						$contentStr= "【欢迎】感谢关注至同思睿，我们专注于制造业信息化，我们将为你带来最新的行业信息";
 						$msgType = "text";
 						$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
 						echo $resultStr;
@@ -130,6 +130,28 @@ class wechatCallbackapiTest
 							."\n【1.添加收藏】直接发送URL即可，注意除URL外不需要编写任何其他内容。"
 							."\n【2.查看收藏】点击\"我的收藏\"菜单即可查看。"
 							."\n【3.内容搜索】直接发送需要搜索的关键字，如\"至同思睿\"";
+							$msgType = "text";
+							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+							echo $resultStr;
+						}else if($eventKey == "integration"){
+							$contentStr= "企业集成能力是我们产品的核心功能，包括："
+							."\n【1.数据集成】从异构数据源获取、转换、加载数据到数据仓库，并提供统一的REST服了数据服务接口"
+							."\n【2.应用集成】通过集成遗留IT系统的接口，能够在原有IT系统内提供新的功能，或者在新的系统内集成访问第三方系统功能"
+							."\n【3.企业搜索】对企业所有类型内容包括文档及数据记录进行索引，并提供企业搜索服务，该服务可直接嵌入其他应用系统";
+							$msgType = "text";
+							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+							echo $resultStr;
+						}else if($eventKey == "mds"){
+							$contentStr= "对于制造业，一端要面临激烈的市场竞争，一端要严格控制生产过程中所需的各种原材料，为保持竞争优势，必须拥有全面的材料信息管理系统。先择MDS有以下主要特征："
+							."\n【1.完备的企业级材料主数据库】可直接对接IMDS或CAMDS，供应商也可直接填报数据，总部及分公司可直接从材料库查阅材料信息"
+							."\n【2.与BOM集成】直接对接BOM系统，建立完整的从产品到材料到物质数据链条，可轻松应对各类环保合规检查"
+							."\n【3.可扩展的法规库】可与现有法规库实现集成，便于法规查阅。也可集成云端数字化法规库，实现自动化合规分析"
+							."\n【4.相似材料推荐】得益于强大的搜索分析功能，设计工程师可通过对照材料找相似材料";
+							$msgType = "text";
+							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+							echo $resultStr;
+						}else if($eventKey == "vr"){
+							$contentStr= "我们拥有专业的虚拟现实设计及制作团队，在航空、机车、汽车等多个领域拥有众多成功案例";
 							$msgType = "text";
 							$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
 							echo $resultStr;
