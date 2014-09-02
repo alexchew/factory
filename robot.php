@@ -54,7 +54,8 @@ class wechatCallbackapiTest
 					<MsgType><![CDATA[%s]]></MsgType>
 					<Content><![CDATA[%s]]></Content>
 					<FuncFlag>0</FuncFlag>
-					</xml>";   									 
+					</xml>";  
+		$description = "";
 
       	//extract post data
 		if (!empty($postStr)){
@@ -79,7 +80,7 @@ class wechatCallbackapiTest
 						$msgType = "text";
 						$resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
 						echo $resultStr;
-					}else if($event=='CLICK'){
+					}else if($event=='CLICK'||$event=='click'){
 						$eventKey = $postObj->EventKey;
 						$openID = $postObj->FromUserName;//this is user id
 						if($eventKey == "my_favorite"){
@@ -301,22 +302,47 @@ class wechatCallbackapiTest
 
 		$url = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=pcitech";
 		$data = '{
-			"button":[
-			{
-			"type":"view",
-			"name":"关于我们",
-			"url":"http://www.pcitech.cn"
-			},
-			{
-			"type":"click",
-			"name":"我的收藏",
-			"key":"my_favorite"
-			},
-			{
-			"type":"click",
-			"name":"联系方式",
-			"key":"contact_info"
-			}		
+			"button": [
+				{
+					"type": "view", 
+					"name": "公司网站", 
+					"url": "http://www.pcitech.cn"
+				}, 
+				{
+					"name": "产品服务", 
+					"sub_button": [
+						{
+							"type": "click", 
+							"name": "材料数据库", 
+							"key": "mds"
+						}, 
+						{
+							"type": "click", 
+							"name": "企业集成", 
+							"key": "integration"
+						}, 
+						{
+							"type": "click", 
+							"name": "虚拟现实", 
+							"key": "vr"
+						}
+					]
+				}, 
+				{
+					"name": "我的...", 
+					"sub_button": [
+						{
+							"type": "click", 
+							"name": "我的收藏", 
+							"key": "my_favorite"
+						}, 
+						{
+							"type": "click", 
+							"name": "使用帮助", 
+							"key": "get_help"
+						}
+					]
+				}
 			]
 		}';
 		$this->postCreateMenu($url,$data);	
@@ -381,26 +407,6 @@ function dataPost($post_string, $url) {//POST方式提交数据
 	$stream_context = stream_context_create ( $context );
 	$data = file_get_contents ( $url, FALSE, $stream_context );
 	return $data;
-}
-
-function getMyFav($openID){
-	$listTpl=" <xml>
-				 <ToUserName><![CDATA[%s]]></ToUserName>
-				 <FromUserName><![CDATA[%s]]></FromUserName>
-				 <CreateTime>%s</CreateTime>
-				 <MsgType><![CDATA[%s]]></MsgType>
-				 <ArticleCount>%s</ArticleCount>
-				 <Articles>%s</Articles>
-				 </xml> ";
-	$itemTpl = " <item>
-				 <Title><![CDATA[%s]]></Title> 
-				 <Description><![CDATA[%s]]></Description>
-				 <PicUrl><![CDATA[%s]]></PicUrl>
-				 <Url><![CDATA[%s]]></Url>
-				 </item>";
-
-
-	
 }
 
 ?>
