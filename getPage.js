@@ -7,10 +7,11 @@ var filename = "a";
 var title = "Unknown";
 var user = "unknown";
 
-var solrServer = "http://124.42.107.200:8090/solr/update/json";
+//var solrServer = "http://124.42.107.200:8090/solr/update/json";
+var solrServer = "http://localhost:8080/index";
 
 var server = "http://localhost:8090/weixin";
-var headers = {"Content-Type": "application/json;Charset=UTF-8"};
+var headers = {"Content-Type": "application/json"};
 
 //check mandatory parameter:dir,user,server,url
 if (phantom.args.length < 2) {
@@ -85,7 +86,9 @@ function postIndex(){
 	}catch(err){
 		console.log("error while reading file.[file]"+path+".html\n[error]"+err);
 	}
-	var data =[
+	title = encodeURIComponent(title);
+	content = encodeURIComponent(content);
+	var data =//[  //notice here: for submitting to solr we should use array
 		{
 			id:favid,
 			//title:"[original]"+title+"[GBK2UTF8]"+encodeUtil.GB2312ToUTF8(title)+"[UTF82GBK]"+encodeUtil.UTF8ToGB2312(title),
@@ -97,14 +100,14 @@ function postIndex(){
 			category: "myfav",
 			classifier: "com.prophet.channel.weixin.myfav",
 			uri: "http://124.42.107.200/myfav/"+filename+".html",
-			source: "weixin",
+			source: "nodesolr",
 			securityLevel: 0,
 			summary: "content from weixin myfav",
 			thumbnailURL: "http://124.42.107.200/myfav/"+filename+"_1.png"
-		}
-	];
+		};
+	//];
 	//console.log("try to post index.[data]"+JSON.stringify(data));
-	console.log("try to post index.[data]"+data[0].title);
+	console.log("try to post index.[data]"+data/*[0]*/.title);
 	page.open(solrServer,'POST',JSON.stringify(data), headers, function (status) {
 		if (status !== 'success') {
 			console.log('Unable to access network. [status]'+status);
